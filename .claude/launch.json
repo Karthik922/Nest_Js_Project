@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "angular",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../Angular_project", "start"],
+      "port": 4200
+    }
+  ]
+}

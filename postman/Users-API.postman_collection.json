@@ -1,0 +1,271 @@
+{
+  "info": {
+    "name": "Nest Users API",
+    "description": "CRUD + pagination for the users table (NestJS + Sequelize + PostgreSQL).\n\nRun the app with `npm run start:dev`, then run requests top to bottom. \"Create User\" saves the new id into the `userId` collection variable, which the Get One / Update / Delete requests use.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "userId", "value": "1" },
+    { "key": "nextCursor", "value": "0" }
+  ],
+  "item": [
+    {
+      "name": "Create User",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Unique email per run so repeated runs don't hit the 409 duplicate check",
+              "pm.collectionVariables.set('uniqueEmail', `user_${Date.now()}@example.com`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('Has id', () => pm.expect(body.id).to.be.a('number'));",
+              "pm.collectionVariables.set('userId', body.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Karthik\",\n  \"email\": \"{{uniqueEmail}}\",\n  \"age\": 28\n}"
+        },
+        "url": "{{baseUrl}}/users"
+      }
+    },
+    {
+      "name": "Get All Users (page)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('Has data array and page meta', () => {",
+              "  pm.expect(body.data).to.be.an('array');",
+              "  pm.expect(body.meta).to.have.keys('page', 'limit', 'total', 'totalPages', 'hasNextPage', 'hasPrevPage');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/users?page=1&limit=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["users"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "20", "description": "1-100, default 20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get All Users (cursor - first page)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('Has cursor meta', () => pm.expect(body.meta).to.have.keys('limit', 'nextCursor', 'hasNextPage'));",
+              "if (body.meta.nextCursor !== null) pm.collectionVariables.set('nextCursor', body.meta.nextCursor);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/users?cursor=0&limit=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["users"],
+          "query": [
+            { "key": "cursor", "value": "0" },
+            { "key": "limit", "value": "20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get All Users (cursor - next page)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "if (body.meta.nextCursor !== null) pm.collectionVariables.set('nextCursor', body.meta.nextCursor);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "description": "Uses nextCursor saved by the previous request. Send repeatedly to walk through all users.",
+        "url": {
+          "raw": "{{baseUrl}}/users?cursor={{nextCursor}}&limit=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["users"],
+          "query": [
+            { "key": "cursor", "value": "{{nextCursor}}" },
+            { "key": "limit", "value": "20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get One User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Correct id', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('userId'))));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/users/{{userId}}"
+      }
+    },
+    {
+      "name": "Update User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Name updated', () => pm.expect(pm.response.json().name).to.eql('Karthik Updated'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Karthik Updated\",\n  \"age\": 29\n}"
+        },
+        "url": "{{baseUrl}}/users/{{userId}}"
+      }
+    },
+    {
+      "name": "Delete User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/users/{{userId}}"
+      }
+    },
+    {
+      "name": "Error cases",
+      "item": [
+        {
+          "name": "Get Deleted User (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 404', () => pm.response.to.have.status(404));"]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/users/{{userId}}" }
+        },
+        {
+          "name": "Create User - invalid body (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"email\": \"not-an-email\",\n  \"age\": -5\n}" },
+            "url": "{{baseUrl}}/users"
+          }
+        },
+        {
+          "name": "Get All - limit too large (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users?limit=500",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [{ "key": "limit", "value": "500" }]
+            }
+          }
+        },
+        {
+          "name": "Get One - non-numeric id (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/users/abc" }
+        }
+      ]
+    }
+  ]
+}
