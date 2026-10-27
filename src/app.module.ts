@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { GalleryModule } from './gallery/gallery.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module.js';
       }),
     }),
     UsersModule,
+    GalleryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
